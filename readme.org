@@ -1,4 +1,4 @@
-* Projektna naloga pri programiranju 1
+* Fonološka analiza slovenske literature
 
 ** Osnovna ideja in viri podatkov
 
