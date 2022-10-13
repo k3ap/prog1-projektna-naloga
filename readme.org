@@ -12,7 +12,7 @@ Baza podatkov o poudarjenosti zlogov ni popolnoma natančna; avtorji v opisu pod
 
 *** Količina podatkov
 
-Wikivir poroča 15.617 literarnih del, zaradi različnih faktorjev (npr. dlib ne hrani metapodatkov za vsa ta dela) pa bo dejansko število analiziranih del manjše in znano kasneje. Metapodatki literarnega dela bodo vsebovali naslednja polja:
+Wikivir poroča 15.617 literarnih del, zaradi različnih faktorjev (npr. dlib ne hrani metapodatkov za vsa ta dela) pa bo dejansko število analiziranih del manjše in znano šele po zbiranju podatkov. Metapodatki literarnega dela bodo vsebovali naslednja polja:
 - vir dela (knjiga/časopis/...)
 - tip dela (proza/drama/...)
 - avtor
