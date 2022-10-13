@@ -1,0 +1,25 @@
+* Projektna naloga pri programiranju 1
+
+** Osnovna ideja in viri podatkov
+
+Osnovna ideja projektne naloge je fonološka primerjava različnih del, objavljenih v slovenskem jeziku. V okviru tega bom uporabil naslednje vire podatkov:
+
+- Zbrana baza podatkov o poudarjenosti zlogov v besedah, dostopna na repozitoriju CLARIN.SI: https://www.clarin.si/repository/xmlui/handle/11356/1186
+- Vsebina raznih literarnih besedil iz https://sl.wikisource.org
+- Metapodatki o besedilih, dostopni na https://dlib.si in/ali https://plus.cobbis.net
+
+Baza podatkov o poudarjenosti zlogov ni popolnoma natančna; avtorji v opisu podajajo 88.5% pravilnost.
+
+*** Količina podatkov
+
+Wikivir poroča 15.617 literarnih del, zaradi različnih faktorjev (npr. dlib ne hrani metapodatkov za vsa ta dela) pa bo dejansko število analiziranih del manjše in znano kasneje. Metapodatki literarnega dela bodo vsebovali naslednja polja:
+- vir dela (knjiga/časopis/...)
+- tip dela (proza/drama/...)
+- avtor
+- leto izdaje
+- podatki o založniku
+
+** Delovna vprašanja
+- Ali tudi proza in dramatika vsebujeta ritmično strukturo?
+- Ali posamezen avtor/založnik preferira neko stopico?
+- Ali je ritmična struktura odvisna od leta izdaje dela?
