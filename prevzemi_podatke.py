@@ -132,7 +132,7 @@ if __name__ == "__main__":
         args.tretja_faza = True
 
     if not any((args.prva_faza, args.druga_faza, args.tretja_faza)):
-        print("Nič ni za storiti. Uporabi --prva-faza, --druga-faza, --treja-faza oz. --vse-faze za vključitev dela.")
+        print("Nič ni za storiti. Uporabi --prva-faza, --druga-faza, --tretja-faza oz. --vse-faze za vključitev dela.")
         quit()
 
     # ustvari backup vseh datotek
