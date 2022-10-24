@@ -18,6 +18,7 @@ from collections.abc import Iterable
 
 # čas med zaporednimi zahtevki na isto spletno stran, v sekundah
 CAS_SPANJA = 1
+IME_DATOTEKE_PRVE_FAZE = "podatki/literarne_strani"
 
 
 async def zapisi_v_datoteko(ime_datoteke, podatki, nacin="a"):
@@ -79,7 +80,7 @@ async def poisci_seznam_literarnih_del(ime_datoteke=None, verbose=False):
         # pri tem smo morda našli povezavo, pisano poševno (class="mw-redirect")
         # ali pa ne. Tega podatka ne potrebujemo.
         povezave_te_strani = re.findall(LITERARNA_STRAN_REGEX, resp.text)
-        povezave_te_strani = list(map(lambda par: par[0], povezave_te_strani))
+        povezave_te_strani = list(map(lambda par: OSNOVNI_LITERARNI_URL + par[0], povezave_te_strani))
 
         if verbose:
             print("Povezave:")
@@ -101,17 +102,43 @@ async def poisci_seznam_literarnih_del(ime_datoteke=None, verbose=False):
     return povezave
 
 
-def pridobi_podatke():
+def pridobi_podatke(verbose=False, prva_faza=True, datoteka_prve_faze=IME_DATOTEKE_PRVE_FAZE):
     """Pomožna funkcija, ki v pravem zaporedju pridobi vse podatke."""
-    povezave = asyncio.run(
-        poisci_seznam_literarnih_del(
-            ime_datoteke="podatki/literarne_strani",
-            verbose=True
+    if prva_faza:
+        povezave = asyncio.run(
+            poisci_seznam_literarnih_del(
+                ime_datoteke=datoteka_prve_faze,
+                verbose=verbose
+            )
         )
-    )
-    from pprint import pprint
-    pprint(povezave)
 
 
 if __name__ == "__main__":
-    pridobi_podatke()
+    import argparse
+    import shutil
+
+    parser = argparse.ArgumentParser(description="Pridobi podatke o literarnih delih.")
+    parser.add_argument("--verbose", action="store_const", const=True, default=False)
+    parser.add_argument("--prva-faza", action="store_const", const=True, default=False)
+    parser.add_argument("--druga-faza", action="store_const", const=True, default=False)
+    parser.add_argument("--tretja-faza", action="store_const", const=True, default=False)
+    parser.add_argument("--vse-faze", action="store_const", const=True, default=False)
+
+    args = parser.parse_args()
+
+    if args.vse_faze:
+        args.prva_faza = True
+        args.druga_faza = True
+        args.tretja_faza = True
+
+    if not any((args.prva_faza, args.druga_faza, args.tretja_faza)):
+        print("Nič ni za storiti. Uporabi --prva-faza, --druga-faza, --treja-faza oz. --vse-faze za vključitev dela.")
+        quit()
+
+    # ustvari backup vseh datotek
+    shutil.copy(IME_DATOTEKE_PRVE_FAZE, IME_DATOTEKE_PRVE_FAZE + "_backup")
+
+    pridobi_podatke(
+        verbose=args.verbose,
+        prva_faza=args.prva_faza
+    )
