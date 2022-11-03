@@ -83,9 +83,7 @@ async def poisci_seznam_literarnih_del(ime_datoteke=None, verbose=False):
         povezave_te_strani = list(map(lambda par: OSNOVNI_LITERARNI_URL + par[0], povezave_te_strani))
 
         if verbose:
-            print("Povezave:")
-            for p in povezave_te_strani:
-                print(p)
+            print(f"Našel {len(povezave_te_strani)} povezav")
 
         povezave.extend(povezave_te_strani)
 
@@ -102,15 +100,32 @@ async def poisci_seznam_literarnih_del(ime_datoteke=None, verbose=False):
     return povezave
 
 
+def pridobi_shranjen_seznam_literarnih_del(ime_datoteke):
+    """Preberi vnaprej shranjen seznam literarnih del iz diska."""
+    with open(ime_datoteke) as f:
+        povezave = [ln.strip() for ln in f if ln.strip()]
+    return povezave
+
+
 def pridobi_podatke(verbose=False, prva_faza=True, datoteka_prve_faze=IME_DATOTEKE_PRVE_FAZE):
     """Pomožna funkcija, ki v pravem zaporedju pridobi vse podatke."""
     if prva_faza:
+        if verbose:
+            print("Pridobivanje prve faze iz interneta.")
+
         povezave = asyncio.run(
             poisci_seznam_literarnih_del(
                 ime_datoteke=datoteka_prve_faze,
                 verbose=verbose
             )
         )
+    else:
+        if verbose:
+            print("Pridobivanje prve faze iz diska.")
+
+        povezave = pridobi_shranjen_seznam_literarnih_del(datoteka_prve_faze)
+
+    print(f"Prva faza dokončana. Naloženih {len(povezave)} povezav.")
 
 
 if __name__ == "__main__":
