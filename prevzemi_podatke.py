@@ -16,6 +16,8 @@ import re
 from collections.abc import Iterable
 import os
 
+from obdelava_xml_podatkov import obdelaj_besede
+
 
 # čas med zaporednimi zahtevki na isto spletno stran, v sekundah
 CAS_SPANJA = 1
@@ -23,6 +25,8 @@ CAS_SPANJA = 1
 # imena datotek, kjer se shranijo podatki
 IME_DATOTEKE_PRVE_FAZE = "podatki/literarne_strani"
 IMENA_DATOTEK_DRUGE_FAZE = "podatki/stran{:0>5}"
+IME_DATOTEKE_BESED = "podatki/accented_sloleks2.xml"
+IME_IZHODNE_DATOTEKE_BESED = "obdelani_podatki/besede.csv"
 
 
 REGEX_POISCI_KATEGORIJE = re.compile(r'<a href="/wiki/Posebno:Kategorije" title="Posebno:Kategorije">[A-Za-z]+</a>: <ul>(.+)</ul></div><div id="mw-hidden-catlinks"')
@@ -315,6 +319,7 @@ if __name__ == "__main__":
     parser.add_argument("--druga-faza", action="store_const", const=True, default=False)
     parser.add_argument("--tretja-faza", action="store_const", const=True, default=False)
     parser.add_argument("--vse-faze", action="store_const", const=True, default=False)
+    parser.add_argument("--besede", action="store_const", const=True, default=False)
 
     args = parser.parse_args()
 
@@ -323,13 +328,18 @@ if __name__ == "__main__":
         args.druga_faza = True
         args.tretja_faza = True
 
-    if not any((args.prva_faza, args.druga_faza, args.tretja_faza)):
-        print("Nič ni za storiti. Uporabi --prva-faza, --druga-faza, --tretja-faza oz. --vse-faze za vključitev dela.")
+    if not any((args.prva_faza, args.druga_faza, args.tretja_faza, args.besede)):
+        print("Nič ni za storiti.")
         quit()
 
     shutil.copy(IME_DATOTEKE_PRVE_FAZE, IME_DATOTEKE_PRVE_FAZE + "_backup")
 
     pridobi_podatke(
         verbose=args.verbose,
-        prva_faza=args.prva_faza
+        prva_faza=args.prva_faza,
+        druga_faza=args.druga_faza
     )
+
+    if args.besede:
+        # predelaj XML datoteko z besedami
+        obdelaj_besede(IME_DATOTEKE_BESED, IME_IZHODNE_DATOTEKE_BESED)
