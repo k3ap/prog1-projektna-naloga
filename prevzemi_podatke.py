@@ -30,6 +30,7 @@ IME_DATOTEKE_BESED = "podatki/accented_sloleks2.xml"
 IME_IZHODNE_DATOTEKE_BESED = "obdelani_podatki/besede.csv"
 IME_DATOTEKE_DRUGE_FAZE = "obdelani_podatki/podatki.csv"
 IME_DATOTEKE_KATEGORIJ = "obdelani_podatki/kategorije.csv"
+IME_VHODNE_DATOTEKE_TRETJE_FAZE = "podatki/viri.csv"
 
 
 REGEX_POISCI_KATEGORIJE = re.compile(r'<a href="/wiki/Posebno:Kategorije" title="Posebno:Kategorije">[A-Za-z]+</a>: <ul>(.+)</ul></div><div id="mw-hidden-catlinks"')
@@ -39,6 +40,8 @@ REGEX_POISCI_ODSTAVKE = re.compile(r'<p>([^<]+)</p>')
 REGEX_POISCI_AVTORJA = re.compile(r'<i><a [^>]+>([^<]+)</a></i>')
 REGEX_POISCI_NASLOV = re.compile(r'<b>([^<]+)</b>')
 REGEX_LETNICA = re.compile(r'\b([12][0-9]{3})\b')
+REGEX_DLIB = re.compile(r'(https?://www\.dlib\.si/\?[^"]+)')
+REGEX_COBBIS = re.compile(r'(https?://plus\.cobiss\.si/[^"]+)')
 
 
 async def zapisi_v_datoteko(ime_datoteke, podatki, nacin="a"):
@@ -223,12 +226,22 @@ async def pridobi_vsebinske_podatke(vsebina):
     else:
         letnica = -1
 
-    return {
+    podatek = {
         "besedilo": besedilo,
         "avtor": avtor,
         "naslov": naslov,
         "letnica": letnica
     }
+
+    vir_match = re.search(REGEX_DLIB, vsebina_strani)
+    if vir_match:
+        podatek["vir"] = vir_match.group(1)
+
+    vir_match = re.search(REGEX_COBBIS, vsebina_strani)
+    if vir_match:
+        podatek["vir"] = vir_match.group(1)
+
+    return podatek
 
 
 async def obdelaj_stran(indeks, verbose=False):
@@ -275,7 +288,7 @@ async def obdelaj_stran(indeks, verbose=False):
     return vsebinski_podatki
 
 
-async def poisci_besedila_literarnih_del(povezave, ime_datoteke_podatkov, ime_datoteke_kategorij, verbose=False):
+async def poisci_besedila_literarnih_del(povezave, ime_datoteke_podatkov, ime_datoteke_kategorij, ime_datoteke_virov, verbose=False):
     """Poišči besedila za vsa literarna dela, našteta v povezavah"""
 
     vsi_podatki = []
@@ -314,10 +327,16 @@ async def poisci_besedila_literarnih_del(povezave, ime_datoteke_podatkov, ime_da
             for kategorija in podatek["kategorije"]:
                 writer.writerow([podatek["povezava"], kategorija])
 
+    with open(ime_datoteke_virov, "w") as f:
+        writer = csv.writer(f)
+        for podatek in vsi_podatki:
+            if "vir" in podatek:
+                writer.writerow([podatek["povezava"], podatek["vir"]])
+
     return vsi_podatki
 
 
-def pridobi_podatke(verbose=False, prva_faza=True, datoteka_prve_faze=IME_DATOTEKE_PRVE_FAZE, druga_faza=True, datoteka_druge_faze=IME_DATOTEKE_DRUGE_FAZE, datoteka_kategorij=IME_DATOTEKE_KATEGORIJ):
+def pridobi_podatke(verbose=False, prva_faza=True, datoteka_prve_faze=IME_DATOTEKE_PRVE_FAZE, druga_faza=True, datoteka_druge_faze=IME_DATOTEKE_DRUGE_FAZE, datoteka_kategorij=IME_DATOTEKE_KATEGORIJ, datoteka_virov=IME_VHODNE_DATOTEKE_TRETJE_FAZE, tretja_faza=True):
     """Pomožna funkcija, ki v pravem zaporedju pridobi vse podatke."""
     if prva_faza:
         if verbose:
@@ -338,7 +357,7 @@ def pridobi_podatke(verbose=False, prva_faza=True, datoteka_prve_faze=IME_DATOTE
     print(f"Prva faza dokončana. Naloženih {len(povezave)} povezav.")
 
     if druga_faza:
-        vsi_podatki = asyncio.run(poisci_besedila_literarnih_del(povezave, datoteka_druge_faze, datoteka_kategorij, verbose))
+        vsi_podatki = asyncio.run(poisci_besedila_literarnih_del(povezave, datoteka_druge_faze, datoteka_kategorij, datoteka_virov, verbose))
         print(f"Druga faza dokončana. Ohranjenih {len(vsi_podatki)} del.")
 
         stevec = 0
@@ -346,6 +365,9 @@ def pridobi_podatke(verbose=False, prva_faza=True, datoteka_prve_faze=IME_DATOTE
             if podatek["letnica"] > 0:
                 stevec += 1
         print(f"Število del z letnico je {stevec}")
+
+    if tretja_faza:
+        pass
 
 
 if __name__ == "__main__":
@@ -382,7 +404,8 @@ if __name__ == "__main__":
     pridobi_podatke(
         verbose=args.verbose,
         prva_faza=args.prva_faza,
-        druga_faza=args.druga_faza
+        druga_faza=args.druga_faza,
+        tretja_faza=args.tretja_faza
     )
 
     if args.besede:
