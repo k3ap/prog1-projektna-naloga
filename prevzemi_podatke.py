@@ -31,6 +31,8 @@ IME_IZHODNE_DATOTEKE_BESED = "obdelani_podatki/besede.csv"
 IME_DATOTEKE_DRUGE_FAZE = "obdelani_podatki/podatki.csv"
 IME_DATOTEKE_KATEGORIJ = "obdelani_podatki/kategorije.csv"
 IME_VHODNE_DATOTEKE_TRETJE_FAZE = "podatki/viri.csv"
+IMENA_DATOTEK_VIROV = "podatki/vir{:0>5}"
+IME_DATOTEKE_VIROV = "obdelani_podatki/viri.csv"
 
 
 REGEX_POISCI_KATEGORIJE = re.compile(r'<a href="/wiki/Posebno:Kategorije" title="Posebno:Kategorije">[A-Za-z]+</a>: <ul>(.+)</ul></div><div id="mw-hidden-catlinks"')
@@ -42,6 +44,8 @@ REGEX_POISCI_NASLOV = re.compile(r'<b>([^<]+)</b>')
 REGEX_LETNICA = re.compile(r'\b([12][0-9]{3})\b')
 REGEX_DLIB = re.compile(r'(https?://www\.dlib\.si/\?[^"]+)')
 REGEX_COBBIS = re.compile(r'(https?://plus\.cobiss\.si/[^"]+)')
+REGEX_VIR_DLIB = re.compile(r'<div class="[^"]+">Vir</div><div class="[^"]+">(<a href="[^"]+"></a>)?<a href="[^"]+">([^<]+)</a>')
+REGEX_VIR_COBISS = re.compile(r'<span>Vrsta gradiva</span> - (.+)')
 
 
 async def zapisi_v_datoteko(ime_datoteke, podatki, nacin="a"):
@@ -130,7 +134,7 @@ def pridobi_shranjen_seznam_literarnih_del(ime_datoteke):
     return povezave
 
 
-async def poisci_besedilo_literarnega_dela(povezava, ime_datoteke, verbose=False):
+async def poisci_besedilo_literarnega_dela(povezava, ime_datoteke, verbose=False, header=""):
     """Poišči html besedilo na dani povezavi in ga shrani v datoteko"""
     if verbose:
         print(f"Obiskujem {povezava}.")
@@ -139,17 +143,20 @@ async def poisci_besedilo_literarnega_dela(povezava, ime_datoteke, verbose=False
         resp = requests.get(povezava)
         if resp.status_code != 200:
             print(f"Stran {povezava} je vrnila kodo {resp.status_code}")
-            return
+            return False
 
     except requests.exceptions.ConnectionError:
         print(f"Napaka pri pridobivanju strani {povezava}")
         print("Spim 3 sekunde, nato nadaljujem.")
         await asyncio.sleep(3)
-        return
+        return False
 
     with open(ime_datoteke, "w") as f:
+        f.write(header)
         f.write(povezava + "\n\n")
         f.write(resp.text)
+
+    return True
 
 
 async def poisci_kategorije(vsebina):
@@ -336,7 +343,67 @@ async def poisci_besedila_literarnih_del(povezave, ime_datoteke_podatkov, ime_da
     return vsi_podatki
 
 
-def pridobi_podatke(verbose=False, prva_faza=True, datoteka_prve_faze=IME_DATOTEKE_PRVE_FAZE, druga_faza=True, datoteka_druge_faze=IME_DATOTEKE_DRUGE_FAZE, datoteka_kategorij=IME_DATOTEKE_KATEGORIJ, datoteka_virov=IME_VHODNE_DATOTEKE_TRETJE_FAZE, tretja_faza=True):
+def pridobi_vir_dlib(besedilo):
+    m = re.search(REGEX_VIR_DLIB, besedilo)
+    if not m:
+        return None
+    return m.group(2)
+
+
+def pridobi_vir_cobiss(besedilo):
+    m = re.search(REGEX_VIR_COBISS, besedilo)
+    if not m:
+        return None
+    return m.group(1)
+
+
+async def poisci_podatke_virov(ime_vhodne_datoteke, ime_izhodne_datoteke, verbose=False):
+    """Poišči podatke drugih virov (dlib/cobiss)"""
+
+    # Prvo pridobi vso besedilo iz interneta
+    datoteke_za_procesiranje = []
+    with open(ime_vhodne_datoteke) as f:
+        reader = csv.reader(f)
+        indeks = 0
+        for wikivir_povezava, druga_povezava in reader:
+            ime_datoteke = IMENA_DATOTEK_VIROV.format(indeks)
+            if not os.path.exists(ime_datoteke):
+                if "{{{ID}}}" not in druga_povezava:
+                    uspeh = await poisci_besedilo_literarnega_dela(
+                        druga_povezava,
+                        IMENA_DATOTEK_VIROV.format(indeks),
+                        header=f"{wikivir_povezava}\n"
+                    )
+                    if uspeh:
+                        datoteke_za_procesiranje.append(ime_datoteke)
+                    await asyncio.sleep(CAS_SPANJA)
+
+            else:  # path exists
+                datoteke_za_procesiranje.append(ime_datoteke)
+            indeks += 1
+
+    # Ko imamo besedilo, ga sprocesiramo
+    gradiva = []
+    for ime_datoteke in datoteke_za_procesiranje:
+        with open(ime_datoteke) as f:
+            povezava_clanka = f.readline().strip()
+            povezava_vira = f.readline().strip()
+            besedilo = f.read()
+
+            if "dlib" in povezava_vira:
+                vir = pridobi_vir_dlib(besedilo)
+            else:
+                vir = pridobi_vir_cobiss(besedilo)
+
+            if vir is not None:
+                gradiva.append((povezava_clanka, vir))
+
+    with open(ime_izhodne_datoteke, "w") as f:
+        writer = csv.writer(f)
+        writer.writerows(gradiva)
+
+
+def pridobi_podatke(verbose=False, prva_faza=True, datoteka_prve_faze=IME_DATOTEKE_PRVE_FAZE, druga_faza=True, datoteka_druge_faze=IME_DATOTEKE_DRUGE_FAZE, datoteka_kategorij=IME_DATOTEKE_KATEGORIJ, datoteka_virov=IME_VHODNE_DATOTEKE_TRETJE_FAZE, tretja_faza=True, izhodna_datoteka_virov=IME_DATOTEKE_VIROV):
     """Pomožna funkcija, ki v pravem zaporedju pridobi vse podatke."""
     if prva_faza:
         if verbose:
@@ -367,7 +434,7 @@ def pridobi_podatke(verbose=False, prva_faza=True, datoteka_prve_faze=IME_DATOTE
         print(f"Število del z letnico je {stevec}")
 
     if tretja_faza:
-        pass
+        podatki_virov = asyncio.run(poisci_podatke_virov(datoteka_virov, izhodna_datoteka_virov, verbose))
 
 
 if __name__ == "__main__":
