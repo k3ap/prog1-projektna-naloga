@@ -41,6 +41,7 @@ REGEX_POISCI_VSEBINO_STRANI = re.compile(r'<div class="mw-parser-output">(.*)<!-
 REGEX_POISCI_ODSTAVKE = re.compile(r'<p>([^<]+)</p>')
 REGEX_POISCI_AVTORJA = re.compile(r'<i><a [^>]+>([^<]+)</a></i>')
 REGEX_POISCI_NASLOV = re.compile(r'<b>([^<]+)</b>')
+REGEX_TABELA = re.compile(r'<table class="wikitable"[^>]+>(.*?)</table>')
 REGEX_LETNICA = re.compile(r'\b([12][0-9]{3})\b')
 REGEX_DLIB = re.compile(r'(https?://www\.dlib\.si/\?[^"]+)')
 REGEX_COBBIS = re.compile(r'(https?://plus\.cobiss\.si/[^"]+)')
@@ -227,11 +228,23 @@ async def pridobi_vsebinske_podatke(vsebina):
         return None
     naslov = naslov_match.group(1)
 
-    letnica_match = re.search(REGEX_LETNICA, vsebina_strani)
-    if letnica_match:
-        letnica = int(letnica_match.group(1))
+    # Letnico iščemo samo v tabeli na začetku, ter v naslovu
+    # prvo pogledamo naslov; s tem najdemo strani kot https://sl.wikisource.org/wiki/Stran:Slovenske_vecernice_1865.djvu/27
+    letnica_match = re.search(REGEX_LETNICA, naslov)
+    if letnica_match is None:
+        tabela = re.search(REGEX_TABELA, vsebina_strani)
+        if tabela is None:
+            # lahko se zgodi, da tabele ni; takrat tudi ni letnice v tabeli
+            letnica = -1
+        else:
+            letnica_match = re.search(REGEX_LETNICA, tabela.group(1))
+            if letnica_match:
+                letnica = int(letnica_match.group(1))
+            else:
+                letnica = -1
     else:
-        letnica = -1
+        # če smo našli letnico že v naslovu
+        letnica = int(letnica_match.group(1))
 
     podatek = {
         "besedilo": besedilo,
