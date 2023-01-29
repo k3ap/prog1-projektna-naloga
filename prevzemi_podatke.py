@@ -41,7 +41,7 @@ REGEX_POISCI_VSEBINO_STRANI = re.compile(r'<div class="mw-parser-output">(.*)<!-
 REGEX_POISCI_ODSTAVKE = re.compile(r'<p>([^<]+)</p>')
 REGEX_POISCI_AVTORJA = re.compile(r'<i><a [^>]+>([^<]+)</a></i>')
 REGEX_POISCI_NASLOV = re.compile(r'<b>([^<]+)</b>')
-REGEX_TABELA = re.compile(r'<table class="wikitable"[^>]+>(.*?)</table>')
+REGEX_TABELA = re.compile(r'<table class="wikitable"[^>]+>((.|\n)*?)</table>')
 REGEX_LETNICA = re.compile(r'\b([12][0-9]{3})\b')
 REGEX_DLIB = re.compile(r'(https?://www\.dlib\.si/\?[^"]+)')
 REGEX_COBBIS = re.compile(r'(https?://plus\.cobiss\.si/[^"]+)')
